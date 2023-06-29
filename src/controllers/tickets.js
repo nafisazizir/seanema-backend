@@ -154,7 +154,7 @@ exports.getAvailableSeats = async (req, res) => {
         status: {
           [Op.ne]: "cancelled",
         },
-      }
+      },
     });
 
     // Extract the booked seat numbers
@@ -174,11 +174,80 @@ exports.getAvailableSeats = async (req, res) => {
     }
 
     return res.status(200).json({ availableSeats });
-
   } catch (error) {
     console.error("Error retrieving available seats:", error);
     return res
       .status(500)
       .json({ message: "Failed to retrieve available seats" });
+  }
+};
+
+// get ticket history
+exports.getTicketHistory = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // Retrieve the ticket transaction history for the user
+    const ticketHistory = await Ticket.findAll({
+      where: {
+        user_id: userId,
+      },
+      include: [
+        {
+          model: Showtime,
+          include: [Movie],
+        },
+      ],
+    });
+
+    return res.status(200).json({ ticketHistory });
+  } catch (error) {
+    console.error("Error retrieving ticket history:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to retrieve ticket history" });
+  }
+};
+
+// cancel ticket
+exports.cancelTicket = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const userId = req.userId;
+
+    // Find the ticket by ID and user ID
+    const ticket = await Ticket.findByPk(id);
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found." });
+    }
+
+    // Check if the logged-in user is the owner of the ticket
+    if (ticket.user_id !== userId) {
+      return res.status(403).json({
+        message: "Access denied. User is not the owner of the ticket.",
+      });
+    }
+
+    // Check if the ticket is already canceled
+    if (ticket.status === "cancelled") {
+      return res.status(400).json({ message: "Ticket is already canceled" });
+    } else if (ticket.status === "not paid") {
+      ticket.status = "cancelled";
+      ticket.save();
+      return res.status(200).json({ message: "Ticket successfully canceled" });
+    } else if (ticket.status === "paid") {
+      const user = await User.findByPk(userId);
+      user.balance += ticket.total_cost;
+      user.save();
+      ticket.status = "cancelled";
+      ticket.save();
+      return res.status(200).json({
+        message: "Ticket successfully canceled and you money already refunded",
+      });
+    }
+    
+  } catch (error) {
+    console.error("Error canceling ticket:", error);
+    return res.status(500).json({ message: "Failed to cancel ticket" });
   }
 };
