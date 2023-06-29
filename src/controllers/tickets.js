@@ -5,6 +5,7 @@ const Movie = db.movies;
 const User = db.users;
 const Op = db.Sequelize.Op;
 
+// booking ticket
 exports.bookTickets = async (req, res) => {
   try {
     let { showtimeId, seatNumbers, status } = req.query;
@@ -94,6 +95,7 @@ exports.bookTickets = async (req, res) => {
   }
 };
 
+// update payment
 exports.updatePayment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -130,5 +132,53 @@ exports.updatePayment = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Failed to update payment status." });
+  }
+};
+
+// get the available seats
+exports.getAvailableSeats = async (req, res) => {
+  try {
+    const { showtimeId } = req.params;
+
+    // Retrieve the showtime
+    const showtime = await Showtime.findByPk(showtimeId);
+
+    if (!showtime) {
+      return res.status(404).json({ message: "Showtime not found" });
+    }
+
+    // Retrieve all booked seats for the showtime
+    const bookedSeats = await Ticket.findAll({
+      where: {
+        showtime_id: showtimeId,
+        status: {
+          [Op.ne]: "cancelled",
+        },
+      }
+    });
+
+    // Extract the booked seat numbers
+    const bookedSeatNumbers = bookedSeats
+      .map((ticket) =>
+        ticket.seat_number.split(",").map((num) => parseInt(num))
+      )
+      .flat();
+
+    // Generate the list of available seats
+    const availableSeats = [];
+
+    for (let seatNumber = 1; seatNumber <= 64; seatNumber++) {
+      if (!bookedSeatNumbers.includes(seatNumber)) {
+        availableSeats.push(seatNumber);
+      }
+    }
+
+    return res.status(200).json({ availableSeats });
+
+  } catch (error) {
+    console.error("Error retrieving available seats:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to retrieve available seats" });
   }
 };
