@@ -24,6 +24,7 @@ app.get("/", (req, res) => {
 
 require("./src/routes/movies")(app);
 require("./src/routes/users")(app);
+require("./src/routes/tickets")(app);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

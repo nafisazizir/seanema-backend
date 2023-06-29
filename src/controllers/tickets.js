@@ -1,0 +1,134 @@
+const db = require("../models");
+const Ticket = db.tickets;
+const Showtime = db.showtimes;
+const Movie = db.movies;
+const User = db.users;
+const Op = db.Sequelize.Op;
+
+exports.bookTickets = async (req, res) => {
+  try {
+    let { showtimeId, seatNumbers, status } = req.query;
+    const userId = req.userId;
+    seatNumbers = Array.isArray(seatNumbers)
+      ? seatNumbers.map((seat) => parseInt(seat))
+      : [parseInt(seatNumbers)].filter(Boolean);
+
+    // Check if the showtime exists
+    const showtime = await Showtime.findByPk(showtimeId, { include: Movie });
+    if (!showtime) {
+      return res.status(404).json({ message: "Showtime not found" });
+    }
+
+    if (seatNumbers.length > 6) {
+      return res
+        .status(404)
+        .json({ message: "Maximum 6 seats per transaction!" });
+    }
+
+    // Check if the seat numbers are available for booking
+    const bookedSeats = await Ticket.findAll({
+      where: {
+        showtime_id: showtimeId,
+        status: {
+          [Op.ne]: "cancelled",
+        },
+      },
+    });
+    const bookedSeatNumbers = bookedSeats
+      .map((ticket) =>
+        ticket.seat_number.split(",").map((num) => parseInt(num))
+      )
+      .flat();
+
+    const unavailableSeatNumbers = seatNumbers.filter((seatNumber) =>
+      bookedSeatNumbers.includes(seatNumber)
+    );
+    if (unavailableSeatNumbers.length > 0) {
+      return res.status(400).json({
+        message: "Some seat numbers are already booked",
+        unavailableSeatNumbers: unavailableSeatNumbers,
+      });
+    }
+
+    const totalCost = showtime.movie.ticket_price * seatNumbers.length;
+
+    const user = await User.findByPk(userId);
+
+    if (totalCost > user.balance || status === "not paid") {
+      Ticket.create({
+        user_id: user.id,
+        showtime_id: showtimeId,
+        seat_number: seatNumbers.toString(),
+        transaction_date: new Date(),
+        total_cost: totalCost,
+        status: "not paid",
+      })
+        .then(() => {
+          res.status(201).json({ message: "Please complete the payment!" });
+        })
+        .catch((error) => {
+          res.status(500).json({ message: "Failed to book tickets", error });
+        });
+    } else {
+      user.balance -= totalCost;
+      user.save();
+
+      Ticket.create({
+        user_id: user.id,
+        showtime_id: showtimeId,
+        seat_number: seatNumbers.toString(),
+        transaction_date: new Date(),
+        total_cost: totalCost,
+        status: "paid",
+      })
+        .then(() => {
+          res.status(201).json({ message: "Transaction success!" });
+        })
+        .catch((error) => {
+          res.status(500).json({ message: "Failed to book tickets", error });
+        });
+    }
+  } catch (error) {
+    console.error("Error booking tickets:", error);
+    return res.status(500).json({ message: "Failed to book tickets" });
+  }
+};
+
+exports.updatePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+
+    const ticket = await Ticket.findByPk(id);
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found." });
+    }
+
+    // Check if the logged-in user is the owner of the ticket
+    if (ticket.user_id !== userId) {
+      return res.status(403).json({
+        message: "Access denied. User is not the owner of the ticket.",
+      });
+    }
+
+    const user = await User.findByPk(userId);
+    if (user.balance < ticket.total_cost) {
+      return res.status(400).json({
+        message: "Balance is not sufficient!",
+      });
+    }
+
+    // Update the payment status to "paid"
+    user.balance -= ticket.total_cost;
+    user.save();
+    ticket.status = "paid";
+    ticket.save();
+
+    return res.status(200).json({ message: "Payment status updated to paid." });
+  } catch (error) {
+    console.error("Error updating payment status:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to update payment status." });
+  }
+};

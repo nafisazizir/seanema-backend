@@ -6,7 +6,7 @@ module.exports = (sequelize, Sequelize) => {
       autoIncrement: true,
     },
     seat_number: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.STRING,
       allowNull: false,
     },
     transaction_date: {
