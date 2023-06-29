@@ -3,7 +3,6 @@ module.exports = (app) => {
   var router = require("express").Router();
 
   router.get("/", movies.getAllMovies);
-
   router.get("/:id", movies.getMovieById);
 
   app.use("/api/movies", router);
