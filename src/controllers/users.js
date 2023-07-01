@@ -6,8 +6,8 @@ const jwt = require("jsonwebtoken");
 
 // register
 exports.register = (req, res) => {
-  const { username, password, name, age } = req.query;
-
+  const { username, password, name, age } =
+    Object.keys(req.body).length > 0 ? req.body : req.query;
   // Check if the username already exists
   User.findOne({ where: { username } })
     .then((existingUser) => {
@@ -37,9 +37,7 @@ exports.register = (req, res) => {
         // Create a new user with the hashed password
         User.create({ username, password: hashedPassword, name, age })
           .then((user) => {
-            res
-              .status(201)
-              .json({ message: "User registered successfully", user });
+            res.status(201).json({ user });
           })
           .catch((error) => {
             res.status(500).json({ message: "Failed to register user", error });
@@ -55,7 +53,8 @@ exports.register = (req, res) => {
 
 // login
 exports.login = (req, res) => {
-  const { username, password } = req.query;
+  const { username, password } =
+    Object.keys(req.body).length > 0 ? req.body : req.query;
 
   // Find the user by username
   User.findOne({ where: { username } })
@@ -74,7 +73,9 @@ exports.login = (req, res) => {
 
         if (result) {
           // Passwords match, user is authenticated
-          const token = jwt.sign({ userId: user.id }, process.env.TOKEN_KEY);
+          const token = jwt.sign({ userId: user.id }, process.env.TOKEN_KEY, {
+            expiresIn: "2h",
+          });
           return res
             .status(200)
             .json({ message: "Login successful", token: token });
