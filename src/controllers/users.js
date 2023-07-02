@@ -104,7 +104,10 @@ exports.getBalance = (req, res) => {
       }
 
       // Return the user's balance
-      return res.status(200).json({ balance: user.balance });
+      return res.status(200).json({
+        name: user.name,
+        balance: user.balance,
+      });
     })
     .catch((err) => {
       // Error occurred during user retrieval
@@ -115,7 +118,7 @@ exports.getBalance = (req, res) => {
 // top-up balance
 exports.topUpBalance = (req, res) => {
   const userId = req.userId;
-  let { amount } = req.query;
+  let { amount } = Object.keys(req.body).length > 0 ? req.body : req.query;
   amount = parseInt(amount);
 
   // Find the user by their ID
@@ -153,7 +156,7 @@ exports.topUpBalance = (req, res) => {
 // withdraw balance
 exports.withdrawBalance = (req, res) => {
   const userId = req.userId;
-  let { amount } = req.query;
+  let { amount } = Object.keys(req.body).length > 0 ? req.body : req.query;
   amount = parseInt(amount);
 
   // Find the user by their ID
