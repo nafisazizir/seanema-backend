@@ -1,6 +1,8 @@
 const db = require("../models");
 const Op = db.Sequelize.Op;
 const User = db.users;
+const Showtime = db.showtimes;
+const Movie = db.movies;
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
@@ -190,6 +192,40 @@ exports.withdrawBalance = (req, res) => {
       } catch (err) {
         return res.status(500).json({ message: "Failed to withdraw balance" });
       }
+    })
+    .catch((err) => {
+      // Error occurred during user retrieval
+      return res.status(500).json({ message: "Internal server error" });
+    });
+};
+
+exports.checkAge = (req, res) => {
+  const userId = req.userId;
+  const { showtimeId } = req.params;
+
+  // Find the user by their ID
+  User.findByPk(userId)
+    .then((user) => {
+      if (!user) {
+        // User not found
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      Showtime.findByPk(showtimeId).then((showtime) => {
+        if (!showtime) {
+          return res.status(404).json({ message: "Showtime not found" });
+        }
+        Movie.findByPk(showtime.movie_id).then((movie) => {
+          if (!movie) {
+            return res.status(404).json({ message: "Movie not found" });
+          }
+          if (user.age >= movie.age_rating) {
+            return res.status(200).json({ isAllowed: "true" });
+          } else {
+            return res.status(200).json({ isAllowed: "false" });
+          }
+        });
+      });
     })
     .catch((err) => {
       // Error occurred during user retrieval

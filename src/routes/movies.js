@@ -5,6 +5,7 @@ module.exports = (app) => {
   router.get("/", movies.getAllMovies);
   router.get("/:id", movies.getMovieById);
   router.get("/:id/showtimes", movies.getShowtimes);
+  router.get("/showtime-details/:id", movies.getShowtimeDetails);
 
   app.use("/api/movies", router);
 };

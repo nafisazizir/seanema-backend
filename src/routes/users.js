@@ -8,6 +8,7 @@ module.exports = (app) => {
   router.get("/balance", auth, users.getBalance);
   router.post("/topup", auth, users.topUpBalance);
   router.post("/withdraw", auth, users.withdrawBalance);
+  router.get("/check-age/:showtimeId", auth, users.checkAge);
 
   app.use("/api/user", router);
 };

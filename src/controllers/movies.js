@@ -67,6 +67,24 @@ exports.getShowtimes = (req, res) => {
     });
 };
 
+exports.getShowtimeDetails = (req, res) => {
+  const { id } = req.params;
+
+  // Check if the movie exists
+  Showtime.findOne({ where: { id: id } })
+    .then((showtime) => {
+      if (!showtime) {
+        return res.status(404).json({ message: "Showtime not found" });
+      }
+
+      res.status(200).json(showtime);
+    })
+    .catch((error) => {
+      console.error("Failed to retrieve showtime:", error);
+      res.status(500).json({ message: "Failed to retrieve showtime", error });
+    });
+};
+
 const groupShowtimesByDate = (showtimes) => {
   const showtimesByDate = {};
 

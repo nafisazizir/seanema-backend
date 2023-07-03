@@ -8,7 +8,8 @@ const Op = db.Sequelize.Op;
 // booking ticket
 exports.bookTickets = async (req, res) => {
   try {
-    let { showtimeId, seatNumbers, status } = req.query;
+    let { showtimeId, seatNumbers, status } =
+      Object.keys(req.body).length > 0 ? req.body : req.query;
     const userId = req.userId;
     seatNumbers = Array.isArray(seatNumbers)
       ? seatNumbers.map((seat) => parseInt(seat))
@@ -64,8 +65,26 @@ exports.bookTickets = async (req, res) => {
         total_cost: totalCost,
         status: "not paid",
       })
-        .then(() => {
-          res.status(201).json({ message: "Please complete the payment!" });
+        .then((ticket) => {
+          const {
+            id,
+            user_id,
+            showtime_id,
+            seat_number,
+            transaction_date,
+            total_cost,
+            status,
+          } = ticket;
+          res.status(201).json({
+            message: "Please complete the payment!",
+            id,
+            user_id,
+            showtime_id,
+            seat_number,
+            transaction_date,
+            total_cost,
+            status,
+          });
         })
         .catch((error) => {
           res.status(500).json({ message: "Failed to book tickets", error });
@@ -82,8 +101,26 @@ exports.bookTickets = async (req, res) => {
         total_cost: totalCost,
         status: "paid",
       })
-        .then(() => {
-          res.status(201).json({ message: "Transaction success!" });
+        .then((ticket) => {
+          const {
+            id,
+            user_id,
+            showtime_id,
+            seat_number,
+            transaction_date,
+            total_cost,
+            status,
+          } = ticket;
+          res.status(201).json({
+            message: "Transaction success!",
+            id,
+            user_id,
+            showtime_id,
+            seat_number,
+            transaction_date,
+            total_cost,
+            status,
+          });
         })
         .catch((error) => {
           res.status(500).json({ message: "Failed to book tickets", error });
@@ -200,7 +237,7 @@ exports.getTicketHistory = async (req, res) => {
       ],
     });
 
-    return res.status(200).json({ ticketHistory });
+    return res.status(200).send(ticketHistory);
   } catch (error) {
     console.error("Error retrieving ticket history:", error);
     return res
@@ -245,9 +282,32 @@ exports.cancelTicket = async (req, res) => {
         message: "Ticket successfully canceled and you money already refunded",
       });
     }
-    
   } catch (error) {
     console.error("Error canceling ticket:", error);
     return res.status(500).json({ message: "Failed to cancel ticket" });
+  }
+};
+
+exports.getTicketDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+
+    const ticket = await Ticket.findByPk(id);
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found." });
+    }
+
+    // Check if the logged-in user is the owner of the ticket
+    if (ticket.user_id !== userId) {
+      return res.status(403).json({
+        message: "Access denied. User is not the owner of the ticket.",
+      });
+    }
+
+    return res.status(200).send(ticket);
+  } catch (error) {
+    console.error("Error fetching your ticket:", error);
+    return res.status(500).json({ message: "Failed to fetching your ticket" });
   }
 };

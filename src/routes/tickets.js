@@ -8,6 +8,7 @@ module.exports = (app) => {
   router.get("/seats/:showtimeId", tickets.getAvailableSeats);
   router.get("/history", auth, tickets.getTicketHistory);
   router.post("/cancel/:id", auth, tickets.cancelTicket);
+  router.get("/:id", auth, tickets.getTicketDetails);
 
   app.use("/api/tickets", router);
 };
