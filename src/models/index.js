@@ -1,9 +1,10 @@
-const dbConfig = require("../config/database.js");
+const dbConfig = process.env;
 
 const Sequelize = require("sequelize");
-const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, {
-  host: dbConfig.HOST,
-  dialect: dbConfig.dialect,
+const sequelize = new Sequelize(dbConfig.POSTGRES_DATABASE, dbConfig.POSTGRES_USER, dbConfig.POSTGRES_PASSWORD, {
+  host: dbConfig.POSTGRES_HOST,
+  dialect: "postgres",
+  dialectOptions: { ssl: {} },
   logging: false,
   define: {
     timestamps: false,
